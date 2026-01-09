@@ -323,14 +323,14 @@ hdb_compare_agents/
 
 ## Troubleshooting
 
-### Database connection failed
-- Verify Postgres is running: `docker compose ps`
-- Check logs: `docker compose logs postgres`
-- Verify DATABASE_URL in `.env` matches docker-compose.yml
+### Port 5432 (for Database) already allocated
+- If you get "Bind for 0.0.0.0:5432 failed: port is already allocated", another service is using port 5432
+- Check running containers: `docker ps`
+- Stop the conflicting container: `docker stop <container_name>`
 
 ### No results found
 - Check if data is loaded: `docker compose exec postgres psql -U hdb -d hdb -c "SELECT COUNT(*) FROM hdb_resale;"`
-- Verify filters are not too restrictive (check trace panel)
+- Verify filters are not too restrictive
 - Try a broader query first
 
 ### Embeddings not working
@@ -341,7 +341,7 @@ hdb_compare_agents/
 ### LLM errors
 - Verify OPENROUTER_API_KEY is valid
 - Check OpenRouter dashboard for quota/rate limits
-- Try a different model via OPENROUTER_MODEL_NAME
+- Try a different model via OPENROUTER_MODEL_NAME, configure at .env
 
 
 ## Acknowledgments
