@@ -134,7 +134,7 @@ The system supports three retrieval modes:
 
 ### Prerequisites
 
-- Docker and Docker Compose
+- Docker
 - Python 3.13+
 - OpenRouter API key ([get one here](https://openrouter.ai/))
 - Jina AI API key ([get one here](https://jina.ai/))
@@ -144,7 +144,7 @@ The system supports three retrieval modes:
 
 1. **Clone the repository**:
 ```bash
-git clone <repository-url>
+git clone https://github.com/edangx100/hdb_compare_agents.git
 cd hdb_compare_agents
 ```
 
