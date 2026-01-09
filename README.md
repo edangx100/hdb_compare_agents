@@ -2,7 +2,7 @@
 
 An agentic search system for finding comparable HDB (Housing Development Board) resale transactions using natural language queries. The system uses a two-agent architecture with iterative refinement to find an optimal candidate pool of 30-200 comparable transactions.
 
-**🎥 <a href="https://hdb-gradio-app-production.up.railway.app" target="_blank" rel="noopener noreferrer">Demo (over data from Jan 2024 to Jan 2026)</a>**
+**🎥 <a href="https://hdb-gradio-app-production.up.railway.app" target="_blank" rel="noopener noreferrer">Live Demo (featuring Jan 2024–Jan 2026 data t)</a>**
 
 ## Features
 
