@@ -253,90 +253,6 @@ Expected: Returns 30-200 comparables with area tolerance applied
 ```
 Expected: May need to relax constraints if too specific
 
-### Advanced Queries (Hybrid Mode)
-
-```
-Find 4-room near Compassvale, around 95 sqm, mid floor
-```
-Expected: Triggers vector similarity search for "Compassvale" street matching
-
-```
-Sengkang 4-room, premium apartment-ish, mid floor, long lease
-```
-Expected: Uses semantic search to find "premium" models like Improved, Premium Apartment
-
-```
-3-room in Punggol near LRT, recent sales
-```
-Expected: BM25 lexical boost for "LRT" keyword matching
-
-### Edge Cases
-
-```
-Find a flat, mid floor
-```
-Expected: Agent asks for missing town and flat_type
-
-```
-4-room in Ang Mo Kio, 80-120 sqm, last 5 years
-```
-Expected: Agent tightens constraints (too broad, 5 years → 24 months)
-
-```
-4-room in Sengkang, 120 sqm, high floor, min 95 years lease, last 1 month
-```
-Expected: Agent relaxes constraints (too specific, widens time/sqm tolerances)
-
-## Database Schema
-
-### Core Table: `hdb_resale`
-
-**Raw columns** (from CSV):
-- `month`, `town`, `flat_type`, `block`, `street_name`, `storey_range`, `flat_model`
-- `floor_area_sqm`, `lease_commence_date`, `remaining_lease`, `resale_price`
-
-**Derived columns** (computed during ingestion):
-- `month_date`: DATE parsed from "YYYY-MM" string
-- `storey_min`, `storey_max`, `storey_mid`: Parsed from "01 TO 03" format
-- `remaining_lease_months`: Parsed from "61 years 04 months" format
-- `listing_text`: Concatenated text for embeddings
-- `listing_embedding`: VECTOR(1024) from Jina embeddings v3
-
-**Indexes**:
-- B-tree: `town`, `flat_type`, `month_date`, `floor_area_sqm`, `resale_price`
-- HNSW: `listing_embedding` for fast ANN vector search
-- BM25: `listing_text` using pg_textsearch for lexical search
-
-## Testing
-
-### Run Unit Tests
-
-```bash
-pytest tests/
-```
-
-Tests cover:
-- Parsing logic (storey ranges, remaining lease)
-- Scoring functions (area, lease, storey, recency)
-- Database query functions
-
-### Run Integration Tests
-
-```bash
-# Test Target Agent extraction
-python -c "from agent.target import get_target_agent; agent = get_target_agent(); print(agent.run_sync('Find 4-room in Bedok').output)"
-
-# Test database queries
-python -c "from db.queries import count_flats; print(count_flats({'town': 'ANG MO KIO', 'flat_type': '4 ROOM'}))"
-
-# Test full orchestrator
-PYTHONPATH=. python agent/orchestrator.py "Find 4-room in Sengkang, 95 sqm, last 12 months"
-```
-
-### Agent Evaluation
-
-See `test_results.md` for evaluation results on 10 diverse test prompts covering various scenarios.
-
 ## Configuration
 
 All configuration is managed via `.env` file (single source of truth).
@@ -385,117 +301,40 @@ BRAINTRUST_PARENT=project_name:hdb-comparable-flats
 ## Project Structure
 
 ```
-hdb_v0/
+hdb_compare_agents/
+├── .env                    # Environment variables
+├── .env.example            # Environment variable template
+├── .gitignore              # Git ignore file
 ├── agent/
-│   ├── __init__.py
-│   ├── llm_client.py      # OpenRouter LLM client setup
 │   ├── models.py          # Pydantic models (Target, PlannerDecision, Stats, etc.)
 │   ├── orchestrator.py    # Main loop coordinator
 │   ├── planner.py         # Planner Agent (relax/tighten decisions)
+│   ├── prompts.py         # Agent prompts
 │   ├── scoring.py         # Deterministic ranking logic
 │   ├── target.py          # Target Agent (intent extraction)
 │   ├── tools.py           # Database tool functions
 │   └── tracing.py         # BrainTrust/OpenTelemetry setup
+├── data/
+│   └── ResaleflatpricesbasedonregistrationdatefromJan2017onwards.csv  # HDB resale data
 ├── db/
 │   ├── ingest.py          # CSV download and embedding generation
 │   ├── queries.py         # SQL query functions
 │   └── schema.sql         # Database schema (idempotent)
 ├── docker/
 │   └── Dockerfile         # Postgres 17 with extensions
-├── tests/
-│   ├── test_parsing.py    # Parsing logic tests
-│   ├── test_queries.py    # Database query tests
-│   └── test_scoring.py    # Ranking logic tests
+├── docs/
+│   └── images/            # Documentation images
 ├── viz/
 │   └── plots.py           # Matplotlib histogram generation
 ├── app.py                 # Gradio UI
 ├── docker-compose.yml     # Local Postgres service
+├── plan.md                # Project plan
+├── README.md              # This file
 ├── requirements.txt       # Python dependencies
 ├── settings.py            # Configuration management (pydantic-settings)
-├── .env.example           # Environment variable template
-└── CLAUDE.md              # Developer guide for Claude Code
+└── todos.md               # Task list
 ```
 
-## Key Implementation Patterns
-
-### Text Normalization
-
-All town/flat_type/street values are normalized to uppercase with collapsed whitespace before DB queries:
-
-```python
-# "ang mo kio" → "ANG MO KIO"
-# "4-room" → "4 ROOM"
-```
-
-### Filter Building
-
-Converts `Target` model to SQL filter dict. Key behaviors:
-- `floor_area_target` + `tolerance` → expands to `sqm_min`/`sqm_max` range
-- `storey_preference` → maps to storey ranges (low: ≤4, mid: 5-10, high: ≥11)
-- `min_remaining_lease_years` → converted to months (years × 12)
-- Street hints and price budgets only enforced when adjustment flags are set
-
-### Adjustment Sequences
-
-Relax/tighten adjustments follow predefined sequences:
-
-```python
-RELAX_MONTHS_SEQUENCE = (12, 18, 24)
-RELAX_SQM_TOLERANCE_SEQUENCE = (5.0, 8.0, 12.0)
-TIGHTEN_MONTHS_SEQUENCE = (24, 12, 6)
-TIGHTEN_SQM_TOLERANCE_SEQUENCE = (12.0, 8.0, 5.0, 3.0)
-TIGHTEN_LEASE_YEARS_SEQUENCE = (60, 70, 80, 90)
-```
-
-Adjustments move to the next value in sequence; if already at limit, adjustment is unavailable.
-
-### Clarifying Questions
-
-The system asks clarifying questions in three cases:
-
-1. **Missing required fields**: Town or flat_type not provided
-2. **Filter conflicts**: Range filters inverted (e.g., sqm_min > sqm_max)
-3. **Planner decides "clarify"**: Results too sparse/broad and no valid adjustments remain
-
-## Performance Considerations
-
-- Candidate pool capped at 500 rows for reranking
-- UI results capped at 200 rows (adjustable)
-- HNSW index provides fast ANN search (typically <50ms for vector queries)
-- B-tree indexes on common filter columns for fast structured queries
-
-## Observability
-
-### BrainTrust Integration
-
-When `BRAINTRUST_API_KEY` is configured, the system automatically:
-- Traces all LLM calls with input/output/latency
-- Logs agent decisions and adjustments
-- Tracks token usage and costs
-- Records database query performance
-
-View traces at https://braintrust.dev/
-
-### Agent Trace UI
-
-The Gradio UI includes an expandable trace panel showing:
-- Each iteration step
-- Filters applied
-- Candidate count at each step
-- Planner decisions and adjustments
-- Retrieval mode (structured/hybrid/vector+BM25)
-- Query text used for embeddings
-
-## Data Updates
-
-Ingestion is **manual** - update by re-downloading CSV and running `db/ingest.py`.
-
-To update data:
-```bash
-PYTHONPATH=. python db/ingest.py
-```
-
-**Important**: Changing `EMBEDDING_MODEL_NAME` or `EMBEDDING_DIM` requires re-running full ingestion to regenerate all embeddings.
 
 ## Troubleshooting
 
@@ -519,13 +358,6 @@ PYTHONPATH=. python db/ingest.py
 - Check OpenRouter dashboard for quota/rate limits
 - Try a different model via OPENROUTER_MODEL_NAME
 
-## Contributing
-
-See `CLAUDE.md` for detailed developer documentation and Claude Code guidance.
-
-## License
-
-[Add license information here]
 
 ## Acknowledgments
 
