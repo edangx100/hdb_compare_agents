@@ -58,6 +58,9 @@ graph TD
     K --> L[User Response]
     L --> A
     F --> M[Return Results]
+
+    style B fill:#4A90E2,stroke:#2E5C8A,stroke-width:3px,color:#fff
+    style G fill:#E27D60,stroke:#B85C42,stroke-width:3px,color:#fff
 ```
 
 ### Component Responsibilities
