@@ -11,7 +11,7 @@ An agentic search system for finding comparable HDB (Housing Development Board) 
 - **Hybrid Retrieval**: Combines structured filters with semantic vector search and BM25 lexical matching
 - **Deterministic Ranking**: Scores results by area match, lease remaining, storey preference, and recency
 - **Visual Analytics**: Price histogram with median and percentile overlays
-- **Transparent Agent Trace**: See every decision the agent makes during the search process
+- **Agent Trace**: See decision the agent makes during the search process
 - **BrainTrust Integration**: Full observability with trace logging and LLM monitoring
 
 ## Screenshots
@@ -99,20 +99,6 @@ User Query → Target Agent → filters → COUNT
         CLARIFY         ACCEPT          RELAX/TIGHTEN │
      (ask user)      (done, fetch)    (adjust, loop)──┘
 ```
-
-**Relax adjustments** (when count < 30):
-- `widen_time_window`: 12→18→24 months
-- `widen_sqm_tolerance`: ±5→±8→±12 sqm
-- `drop_storey_preference`: remove low/mid/high constraint
-
-**Tighten adjustments** (when count > 200):
-- `narrow_time_window`: 24→12→6 months
-- `narrow_sqm_tolerance`: ±12→±8→±5→±3 sqm
-- `raise_min_lease_years`: 60→70→80→90 years
-- `require_street_hint`: enforce street_name filter
-- `cap_price_budget`: apply price_budget_max as hard filter
-
-**Max iterations**: 4 relax steps, 4 tighten steps (configurable)
 
 ### Hybrid Retrieval System
 
