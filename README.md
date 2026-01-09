@@ -129,7 +129,6 @@ The system supports three retrieval modes:
 - **Embeddings**: Jina AI embeddings-v3 (1024 dimensions)
 - **UI**: Gradio
 - **Observability**: BrainTrust with OpenTelemetry
-- **ORM**: SQLAlchemy (engine only, no ORM models)
 
 ## Setup
 
