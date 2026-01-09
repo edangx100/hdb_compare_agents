@@ -160,7 +160,7 @@ The system supports three retrieval modes:
 1. **Clone the repository**:
 ```bash
 git clone <repository-url>
-cd hdb_v0
+cd hdb_compare_agents
 ```
 
 2. **Create Python virtual environment**:
