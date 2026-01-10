@@ -196,8 +196,7 @@ PYTHONPATH=. python db/ingest.py
 ```
 
 This will:
-- Download HDB resale data from data.gov.sg
-- Filter to last 5 years (configurable via `INGEST_YEARS`)
+- Filter to last 2 years (configurable via `INGEST_YEARS`, maximum is 5 years)
 - Parse derived columns (storey ranges, remaining lease)
 - Generate embeddings for each listing
 - Load data into PostgreSQL
